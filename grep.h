@@ -6,14 +6,21 @@
 #include <iostream>
 #include <map>
 #include <vector>
-#include <thread>
+#include <atomic>
+#include <memory>
+
+#include "threadpool.h"
+
 using namespace std;
 
 namespace fs = std::filesystem;
 
+struct ThreadLogStruct{
+    std::thread::id id;
+    std::vector<std::string> filenames;
+};
 
-class Grep
-{
+class Grep{
 public:
     Grep(int argc, char *argv[]);
     void Execute();
@@ -27,10 +34,13 @@ private:
     std::string searchWord;
     fstream resultFile;
     fstream logFile;
-    int fileCount = 0;
-    int filePatternCount = 0;
-    int patternCount = 0;
-    std::map<const std::thread::id, std::vector<std::string>> threadLogMap;
+    atomic_int fileCount = 0;
+    atomic_int filePatternCount = 0;
+    atomic_int patternCount = 0;
+    std::vector<ThreadLogStruct> threadLogVec;
+    std::map<std::thread::id, int> threadLogMapToIndex;
+    std::unique_ptr<ThreadPool> threadPool;
+    std::mutex resultMutex;
 };
 
 #endif // GREP_H

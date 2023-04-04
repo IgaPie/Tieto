@@ -1,4 +1,5 @@
 #include "grep.h"
+#include <chrono>
 
 Grep::Grep(int argc, char *argv[])
 {
@@ -29,48 +30,72 @@ Grep::Grep(int argc, char *argv[])
 
     resultFile.open(resultName, ios::out);
     logFile.open(logName, ios::out);
-    threadLogMap.insert_or_assign(std::this_thread::get_id(), std::vector<std::string>());
+    threadPool = make_unique<ThreadPool>(threadCount);
+
+    for(int i = 0; i < threadCount; i++){
+        ThreadLogStruct log = {threadPool->GetThreadID(i), std::vector<std::string>()};
+        threadLogVec.push_back(log);
+        threadLogMapToIndex.insert_or_assign(log.id, i);
+    }
 }
+
 Grep::~Grep(){
     resultFile.close();
     logFile.close();
 }
+
 void Grep::Execute(){
+    auto start = std::chrono::high_resolution_clock::now();
     for(const fs::directory_entry& dir_entry : fs::recursive_directory_iterator(baseDir))
     {
         if(dir_entry.is_directory()){
             continue;
         }
         fileCount++;
-        threadLogMap[std::this_thread::get_id()].push_back(dir_entry.path().filename().string());
-        auto path = dir_entry.path();
-        fstream file;
-        file.open(path);
-        string line;
-        int nrLine = 1;
-        bool patternFound = false;
-        while(getline(file, line)){
-            if(line.find(searchWord) != string::npos){
-                patternCount++;
-                patternFound = true;
-                resultFile << path << ":" << nrLine << ": " << line <<std::endl;
+        threadPool->AddJob( [this, dir_entry](){
+            threadLogVec[threadLogMapToIndex[std::this_thread::get_id()]].filenames.push_back(dir_entry.path().filename().string());
+            auto path = dir_entry.path();
+            fstream file;
+            file.open(path);
+            string line;
+            int nrLine = 1;
+            bool patternFound = false;
+            while(getline(file, line)){
+                if(line.find(searchWord) != string::npos){
+                    patternCount++;
+                    patternFound = true;
+                    {
+                        std::lock_guard lock(resultMutex);
+                        resultFile << path << ":" << nrLine << ": " << line <<std::endl;
+                    }
+                }
+                nrLine++;
             }
-            nrLine++;
-        }
-        if (patternFound) filePatternCount++;
+            if (patternFound) filePatternCount++;
+        });
     }
-    for(auto &thread : threadLogMap){
-        logFile << thread.first << ":";
-        for(auto &str : thread.second){
+    while(threadPool->IsBusy()){}
+    threadPool->Terminate();
+
+    std::sort(threadLogVec.begin(), threadLogVec.end(), [](auto &s1, auto &s2) -> bool{
+        return s1.filenames.size() > s2.filenames.size();
+    });
+
+    for(auto &thread : threadLogVec){
+        logFile << thread.id << ":";
+        for(auto &str : thread.filenames){
             logFile << str << ",";
         }
         logFile << std::endl;
     }
+
+    auto end = std::chrono::high_resolution_clock::now();
+
     std::cout << "Searched files: " << fileCount <<std::endl;
     std::cout << "Files with pattern: " << filePatternCount <<std::endl;
     std::cout << "Patterns number: " << patternCount << std::endl;
     std::cout << "Result file: " << resultName << std::endl;
     std::cout << "Log file: " << logName << std::endl;
     std::cout << "Used threads: " << threadCount << std::endl;
-    std::cout << "Elapsed time: " << 0 << std::endl;
+    std::cout << "Elapsed time: " << std::chrono::duration_cast<chrono::milliseconds>(end - start).count() << "ms" << std::endl;
 }

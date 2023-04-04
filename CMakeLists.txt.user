@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE QtCreatorProject>
-<!-- Written by QtCreator 9.0.2, 2023-04-03T12:14:11. -->
+<!-- Written by QtCreator 9.0.2, 2023-04-03T21:52:33. -->
 <qtcreator>
  <data>
   <variable>EnvironmentId</variable>
@@ -390,7 +390,7 @@
     <value type="QString" key="ProjectExplorer.ProjectConfiguration.DisplayName">Tieto</value>
     <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">CMakeProjectManager.CMakeRunConfiguration.Tieto</value>
     <value type="QString" key="ProjectExplorer.RunConfiguration.BuildKey">Tieto</value>
-    <value type="QString" key="RunConfiguration.Arguments">--dir /home/skoti/IGA/Current/ -l hnhuhuy house</value>
+    <value type="QString" key="RunConfiguration.Arguments">--dir /home/skoti/IGA/Current/ -l hnhuhuy house -t 16 </value>
     <value type="bool" key="RunConfiguration.UseCppDebugger">false</value>
     <value type="bool" key="RunConfiguration.UseCppDebuggerAuto">true</value>
     <value type="bool" key="RunConfiguration.UseLibrarySearchPath">true</value>
